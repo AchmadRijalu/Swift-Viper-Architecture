@@ -9,41 +9,71 @@
 import Foundation
 
 protocol MealRepositoryProtocol {
-
-  func getCategories(result: @escaping (Result<[CategoryModel], Error>) -> Void)
-
+    
+    func getCategories(result: @escaping (Result<[CategoryModel], Error>) -> Void)
+    
 }
 
 final class MealRepository: NSObject {
-
-  typealias MealInstance = (RemoteDataSource) -> MealRepository
-
-  fileprivate let remote: RemoteDataSource
-
-  private init(remote: RemoteDataSource) {
-    self.remote = remote
-  }
-
-  static let sharedInstance: MealInstance = { remoteRepo in
-    return MealRepository(remote: remoteRepo)
-  }
-
+    
+    typealias MealInstance = ( LocaleDataSource ,RemoteDataSource) -> MealRepository
+    fileprivate let remote: RemoteDataSource
+    fileprivate let locale: LocaleDataSource
+    
+    private init(remote: RemoteDataSource, locale: LocaleDataSource) {
+        self.locale = locale
+        self.remote = remote
+        
+    }
+    
+    static let sharedInstance: MealInstance = {localeRepo, remoteRepo in
+        return MealRepository(remote: remoteRepo, locale: localeRepo  )
+    }
+    
 }
 
 extension MealRepository: MealRepositoryProtocol {
-
-  func getCategories(
-    result: @escaping (Result<[CategoryModel], Error>) -> Void
-  ) {
-
-    self.remote.getCategories { remoteResponses in
-      switch remoteResponses {
-      case .success(let categoryResponses):
-        let resultList = CategoryMapper.mapCategoryResponsesToDomains(input: categoryResponses)
-        result(.success(resultList))
-      case .failure(let error):
-        result(.failure(error))
+    
+    func getCategories(
+      result: @escaping (Result<[CategoryModel], Error>) -> Void
+    ) {
+      locale.getCategories { localeResponses in
+        switch localeResponses {
+        case .success(let categoryEntity):
+            let categoryList = CategoryMapper.mapCategoryEntitiesToDomains(input: categoryEntity)
+          if categoryList.isEmpty {
+            self.remote.getCategories { remoteResponses in
+              switch remoteResponses {
+              case .success(let categoryResponses):
+                let categoryEntities = CategoryMapper.mapCategoryResponsesToEntities(input: categoryResponses)
+                self.locale.addCategories(from: categoryEntities) { addState in
+                  switch addState {
+                  case .success(let resultFromAdd):
+                    if resultFromAdd {
+                      self.locale.getCategories { localeResponses in
+                        switch localeResponses {
+                        case .success(let categoryEntity):
+                          let resultList = CategoryMapper.mapCategoryEntitiesToDomains(input: categoryEntity)
+                          result(.success(resultList))
+                        case .failure(let error):
+                          result(.failure(error))
+                        }
+                      }
+                    }
+                  case .failure(let error):
+                    result(.failure(error))
+                  }
+                }
+              case .failure(let error):
+                result(.failure(error))
+              }
+            }
+          } else {
+            result(.success(categoryList))
+          }
+        case .failure(let error):
+          result(.failure(error))
+        }
       }
     }
-  }
 }
