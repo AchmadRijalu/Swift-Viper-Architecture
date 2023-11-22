@@ -61,25 +61,7 @@ extension LocaleDataSource: LocaleDataSourceProtocol {
         }.eraseToAnyPublisher()
     }
     
-//    func addCategories(
-//        from categories: [CategoryEntity],
-//        result: @escaping (Result<Bool, DatabaseError>) -> Void
-//    ) {
-//        if let realm = realm {
-//            do {
-//                try realm.write {
-//                    for category in categories {
-//                        realm.add(category, update: .all)
-//                    }
-//                    result(.success(true))
-//                }
-//            } catch {
-//                result(.failure(.requestFailed))
-//            }
-//        } else {
-//            result(.failure(.invalidInstance))
-//        }
-//    }
+
     func addCategories(from categories: [CategoryEntity]) -> AnyPublisher<Bool, Error> {
         return Future<Bool, Error> {
             completion in

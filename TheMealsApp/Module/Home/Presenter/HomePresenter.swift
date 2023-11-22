@@ -20,6 +20,8 @@ class HomePresenter: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
     
     init(homeUseCase: HomeUseCase) {
+//        let m = MealRepository
+//        let h = HomeInteractor(repository: MealRepository.sharedInstance)
         self.homeUseCase = homeUseCase
     }
     
@@ -36,6 +38,7 @@ class HomePresenter: ObservableObject {
             }
         }, receiveValue: {
             categories in
+            self.categories = categories
         }
         ).store(in: &cancellables)
     }
